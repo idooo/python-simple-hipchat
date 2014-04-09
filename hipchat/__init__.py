@@ -14,6 +14,9 @@ FORMAT_DEFAULT = 'json'
 
 
 class HipChat(object):
+
+    limits = {}
+    
     def __init__(self, token=None, url=API_URL_DEFAULT, format=FORMAT_DEFAULT):
         self.url = url
         self.token = token
@@ -57,9 +60,18 @@ class HipChat(object):
         method_url = method_url + '?' + query_string
 
         req = self.RequestWithMethod(method_url, http_method=method, data=request_data)
-        response = self.opener.open(req, None, timeout).read()
+        response = self.opener.open(req, None, timeout)
 
-        return json.loads(response.decode('utf-8'))
+        info = response.info()
+        self.limits = {
+            'limit': int(info.getheaders('X-RateLimit-Limit')[0]),
+            'remaining': int(info.getheaders('X-RateLimit-Remaining')[0]),
+            'reset': int(info.getheaders('X-RateLimit-Reset')[0])
+        }
+
+        response_data = response.read()
+
+        return json.loads(response_data.decode('utf-8'))
 
     def list_rooms(self):
         return self.method('rooms/list')
